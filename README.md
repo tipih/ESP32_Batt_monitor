@@ -5,3 +5,4 @@ It will enable autolight to the build in backlight, as well as have the Batt ind
 My current setup is using 470 + 56 kohm voltage divider to split voltage from mas 42 volt down to max 3.3 volt, that is the ESP32 ADC ref input
 This can most likely be optimised even futher, in order to bring down the leak curret even futher, current setup uses approx. 80 uA
 
+TODO: use 12+1 MOhm for voltage diveder and 1 uF capasitor, should give a fairly good meassurement on a batteri, settle time less than 5 sec
