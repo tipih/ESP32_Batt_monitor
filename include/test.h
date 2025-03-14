@@ -7,7 +7,7 @@
 
 #define singlecell //multiplecell 
 
-#ifdef multiplecell
+#ifdef multiplecell //Voltage using a voltage devider
 #define battLevel1                2.6
 #define battLevel2                2.7
 #define battLevel3                2.8
