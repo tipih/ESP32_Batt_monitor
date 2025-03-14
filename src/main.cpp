@@ -28,15 +28,16 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
-#include <test.h>
+#include "test.h"
 
 #define BUTTON_PIN_BITMASK(GPIO) (1ULL << GPIO)  // 2 ^ GPIO_NUMBER in hex
 #define USE_EXT0_WAKEUP          1               // 1 = EXT0 wakeup, 0 = EXT1 wakeup
 #define WAKEUP_GPIO              GPIO_NUM_33     // Only RTC IO are allowed - ESP32 Pin example
+
 #define debug
 
 
-#define sleepTimeout              5000
+#define sleepTimeout              150000
 
 
 unsigned long previousMillis1 = 0;
@@ -46,10 +47,12 @@ const long updateLedAndBt = 2000; // Interval for function2 (2 seconds)
 
 
 
-const byte pinNumber = 36;
+const byte pinNumber = 36; //Pin for ADC meassurement
 unsigned long timeToSleep;
 RTC_DATA_ATTR int bootCount = 0;
 
+void getADC();
+void blinkLed();
 
 
 /********************************************************************************************/
@@ -223,7 +226,7 @@ void setup() {
 void loop() {
 unsigned long currentMillis = millis();
 int getData = -1;
-Serial.println("Loop");
+//Serial.println("Loop");
   //This is not going to be called
 
  
@@ -246,9 +249,9 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
 }
 
 
-
+delayMicroseconds(100);
 timeToSleep++;
-Serial.println(timeToSleep);
+//Serial.println(timeToSleep);
 if (timeToSleep==sleepTimeout) {
 #ifdef debug
  Serial.println("Going to sleep now");
