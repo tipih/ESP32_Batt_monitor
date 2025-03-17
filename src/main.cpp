@@ -35,9 +35,10 @@
 #define WAKEUP_GPIO              GPIO_NUM_33     // Only RTC IO are allowed - ESP32 Pin example
 
 #define debug
+#define adc_ajustedment 12.6658
 
 
-#define sleepTimeout              150000
+#define sleepTimeout              550000
 
 
 unsigned long previousMillis1 = 0;
@@ -270,10 +271,12 @@ if (timeToSleep==sleepTimeout) {
 void getADC()
 {
   char buffer[14];
+  char buffer1[14];
   // Get the adjusted input value with the help of the 'analogReadAdjusted' function.
   float adjustedInputValue = analogReadAdjusted(pinNumber);
   // Calculate the adjusted voltage from the adjusted analog input value.
   float adjustedInputVoltage = 3.3 / 4096 * adjustedInputValue;
+  float tenCellValue=(adjustedInputVoltage*adc_ajustedment)+0.6559;
   
 #ifdef debug
   Serial.print(timeToSleep);
@@ -281,10 +284,12 @@ void getADC()
   Serial.print(adjustedInputValue, 3);
   Serial.print(" | V new: ");
   Serial.print(adjustedInputVoltage, 3);
+  Serial.print(" | V 10 Cell: ");
+  Serial.print(tenCellValue, 3);
   Serial.println();
 #endif
 
-  snprintf(buffer, sizeof(buffer), "%.3f", adjustedInputVoltage); // .2 specifies 2 decimal places
+  snprintf(buffer, sizeof(buffer), "%.3f", tenCellValue); // .2 specifies 2 decimal places
   
   //On send to BTLE if there is a device connected
   if (deviceConnected)
