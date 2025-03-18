@@ -42,7 +42,7 @@ double sensorValue = 0;  // variable to store the value coming from the sensor
 #define BUTTON_PIN_BITMASK(GPIO) (1ULL << GPIO)  // 2 ^ GPIO_NUMBER in hex
 #define USE_EXT0_WAKEUP          1               // 1 = EXT0 wakeup, 0 = EXT1 wakeup
 #define WAKEUP_GPIO              GPIO_NUM_33     // Only RTC IO are allowed - ESP32 Pin example
-#define GPIO_BTN                 GPIO_NUM_34     //
+#define GPIO_BTN                 GPIO_NUM_32     //
 #define debug
 #define adc_ajustedment 12.6658
 
@@ -63,6 +63,7 @@ RTC_DATA_ATTR int bootCount = 0;
 
 void getADC();
 void checkADC();
+void setLedLevel();
 void setLedOn(byte  led);
 void setLedOff(byte  led);
 void turnOnBackLight();
@@ -211,6 +212,7 @@ void setup() {
   //setup all pins
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(WAKEUP_GPIO, INPUT);
+  pinMode(GPIO_BTN, INPUT);
   
   //Setting LED1-5 for output
   setLedPinMode();
@@ -331,7 +333,7 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
  getADC();
  
  if (NrbOfAdc==0){
-   //setLedLevel(); //TODO
+   setLedLevel(); //TODO
   NrbOfAdc=1;
 
 }
@@ -353,6 +355,7 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
     turnOnBackLight();
   }
 
+delayMicroseconds(100);
 timeToSleep++;
 //Serial.println(timeToSleep);
 if (timeToSleep==sleepTimeout) {
@@ -391,7 +394,7 @@ void getADC()
   Serial.println();
 #endif
 
-  snprintf(buffer, sizeof(buffer), "%.3f", adjustedInputVoltage); // .2 specifies 2 decimal places
+  snprintf(buffer, sizeof(buffer), "%.3f", tenCellValue); // .2 specifies 2 decimal places
   snprintf(buffer1, sizeof(buffer1), "%d", timeToSleep); // 
   
   //On send to BTLE if there is a device connected
@@ -401,7 +404,7 @@ void getADC()
     // customCharacteristic.setValue((float&)adjustedInputVoltage);
     customCharacteristic.setValue((std::string)buffer);   //Set the string
     customCharacteristic.notify();                        // Notify the client of a change
-    customCharacteristic1.setValue((std::string)buffer);   //Set the string
+    customCharacteristic1.setValue((std::string)buffer1);   //Set the string
     customCharacteristic1.notify();                        // Notify the client of a change
   }
 
