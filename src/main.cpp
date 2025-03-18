@@ -30,13 +30,23 @@
 #include <BLE2902.h>
 #include <test.h>
 
+
+volatile byte NrbOfAdc = 0;
+volatile bool backLightOn = false;
+volatile bool backLightDetect = false;
+volatile unsigned long int currenttime = 0;
+volatile unsigned int NrbOfWakeUp = 0;
+double sensorValue = 0;  // variable to store the value coming from the sensor
+
+
 #define BUTTON_PIN_BITMASK(GPIO) (1ULL << GPIO)  // 2 ^ GPIO_NUMBER in hex
 #define USE_EXT0_WAKEUP          1               // 1 = EXT0 wakeup, 0 = EXT1 wakeup
 #define WAKEUP_GPIO              GPIO_NUM_33     // Only RTC IO are allowed - ESP32 Pin example
+#define GPIO_BTN                 GPIO_NUM_34     //
 #define debug
 
 
-#define sleepTimeout              5000
+#define sleepTimeout              15000
 
 
 unsigned long previousMillis1 = 0;
@@ -50,7 +60,12 @@ const byte pinNumber = 36;
 unsigned long timeToSleep;
 RTC_DATA_ATTR int bootCount = 0;
 
-
+void getADC();
+void checkADC();
+void setLedOn(byte  led);
+void setLedOff(byte  led);
+void turnOnBackLight();
+void turnOffBackLight();
 
 /********************************************************************************************/
 /* Define the UUID for our Custom Service */
@@ -67,15 +82,38 @@ BLECharacteristic customCharacteristic(
   BLECharacteristic::PROPERTY_READ | 
   BLECharacteristic::PROPERTY_NOTIFY
 );
+BLECharacteristic customCharacteristic1(
+  BLEUUID((uint16_t)0x1A01), 
+  BLECharacteristic::PROPERTY_READ | 
+  BLECharacteristic::PROPERTY_NOTIFY
+);
 /********************************************************************************************/
 
 
 
 
 /********************************************************************************************/
-//External interrupt from PIN36
+//External interrupt from PIN36 reset timeout
 void IRAM_ATTR isr() {
   timeToSleep=0;       //Reset the timeout timer
+  if((millis()-currenttime <100000 )&&(backLightOn==false))
+  {
+
+    NrbOfWakeUp++;
+    Serial.print("Movement detected ");
+    Serial.print(millis()-currenttime);
+    Serial.print("   ");
+    Serial.println(NrbOfWakeUp);
+  }
+  else if (backLightOn==false){
+    NrbOfWakeUp=0;
+    Serial.println("No movement detected, ready for next session");
+    backLightDetect=false;
+    Serial.println(NrbOfWakeUp);
+  }
+
+
+
 //Serial.println("ISR detected");
 }
 /********************************************************************************************/
@@ -123,6 +161,46 @@ void print_wakeup_reason() {
 /********************************************************************************************/
 
 
+/********************************************************************************************/
+//ISR for BTN press
+void checkADC(){
+  Serial.println("Function checkADC");
+  NrbOfAdc=0;
+  timeToSleep=0;       //Reset the timeout timer
+  turnOnBackLight();
+}
+
+void setLedOn(byte  led)
+{
+Serial.print("Led on ");
+Serial.println(led);
+switch (led)
+{
+case 1:digitalWrite(LED1, LOW);  break;
+case 2:digitalWrite(LED2, LOW);  break;
+case 3:digitalWrite(LED3, LOW);  break;
+case 4:digitalWrite(LED4, LOW);  break;
+case 5:digitalWrite(LED5, LOW);  break;
+default:
+  break;
+}
+}
+
+void setLedOff(byte  led)
+{
+  Serial.print("Led off ");
+  Serial.println(led);  
+switch (led)
+{
+case 1:digitalWrite(LED1, HIGH);  break;
+case 2:digitalWrite(LED2, HIGH);  break;
+case 3:digitalWrite(LED3, HIGH);  break;
+case 4:digitalWrite(LED4, HIGH);  break;
+case 5:digitalWrite(LED5, HIGH);  break;
+default:
+  break;
+}
+}
 
 
 /********************************************************************************************/
@@ -148,13 +226,20 @@ void setup() {
 
   /* Add a characteristic to the service */
   customService->addCharacteristic(&customCharacteristic);  //customCharacteristic was defined above
+  /* Add a characteristic to the service */
+  customService->addCharacteristic(&customCharacteristic1);  //customCharacteristic was defined above
 
   /* Add Descriptors to the Characteristic*/
   customCharacteristic.addDescriptor(new BLE2902());  //Add this line only if the characteristic has the Notify property
+  customCharacteristic1.addDescriptor(new BLE2902());  //Add this line only if the characteristic has the Notify property
 
   BLEDescriptor VariableDescriptor(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
   VariableDescriptor.setValue("Show Battery Voltage");          /* Use this format to add a hint for the user. This is optional. */
   customCharacteristic.addDescriptor(&VariableDescriptor);    /*```````````````````````````````````````````````````````````````*/
+
+  BLEDescriptor VariableDescriptor1(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
+  VariableDescriptor1.setValue("Show timeout");          /* Use this format to add a hint for the user. This is optional. */
+  customCharacteristic1.addDescriptor(&VariableDescriptor1);   
 
   /* Configure Advertising with the Services to be advertised */
   MyServer->getAdvertising()->addServiceUUID(serviceID);
@@ -169,6 +254,7 @@ void setup() {
 
 
    attachInterrupt(WAKEUP_GPIO, isr, RISING);
+   attachInterrupt(GPIO_BTN, checkADC, HIGH);
   timeToSleep=0;
   //Increment boot number and print it every reboot
   ++bootCount;
@@ -242,10 +328,29 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
 {
  //Call functions
  getADC();
+ 
+ if (NrbOfAdc==0){
+   //setLedLevel(); //TODO
+  NrbOfAdc=1;
+
+}
+
  previousMillis2 = millis();
 }
 
+  //Prepare for movement detection to turn on backlight
+  if ((backLightDetect==false)&&(backLightOn==false))
+  {
+    Serial.println("Ready for movement detection");
+    backLightDetect=true;
+  
+  }
 
+  if (NrbOfWakeUp>4)
+  {
+    Serial.println(NrbOfWakeUp);
+    turnOnBackLight();
+  }
 
 timeToSleep++;
 Serial.println(timeToSleep);
@@ -267,6 +372,7 @@ if (timeToSleep==sleepTimeout) {
 void getADC()
 {
   char buffer[14];
+  char buffer1[14];
   // Get the adjusted input value with the help of the 'analogReadAdjusted' function.
   float adjustedInputValue = analogReadAdjusted(pinNumber);
   // Calculate the adjusted voltage from the adjusted analog input value.
@@ -282,6 +388,7 @@ void getADC()
 #endif
 
   snprintf(buffer, sizeof(buffer), "%.3f", adjustedInputVoltage); // .2 specifies 2 decimal places
+  snprintf(buffer1, sizeof(buffer1), "%d", timeToSleep); // 
   
   //On send to BTLE if there is a device connected
   if (deviceConnected)
@@ -290,6 +397,8 @@ void getADC()
     // customCharacteristic.setValue((float&)adjustedInputVoltage);
     customCharacteristic.setValue((std::string)buffer);   //Set the string
     customCharacteristic.notify();                        // Notify the client of a change
+    customCharacteristic1.setValue((std::string)buffer);   //Set the string
+    customCharacteristic1.notify();                        // Notify the client of a change
   }
 
   setLed(adjustedInputVoltage);   //Set Status LED according voltage
@@ -306,3 +415,76 @@ void blinkLed()
   digitalWrite(LED_BUILTIN, LOW);  // turn the LED off by making the voltage LOW
 }
 /********************************************************************************************/
+
+
+void turnOnBackLight()
+{
+backLightOn=true;
+NrbOfWakeUp=0;
+Serial.println("Turn on Backlight");
+setLedOn(1);
+delay(300);
+}
+
+void turnOffBackLight()
+{
+  backLightOn=false;
+  backLightDetect=false;
+  NrbOfWakeUp=0;
+  Serial.println("Turn off Backlight");
+  setLedOff(1);
+  delay(300);
+
+
+}
+
+void setLedLevel()
+{
+
+  digitalWrite(LED1,HIGH);
+  digitalWrite(LED2,HIGH);
+  digitalWrite(LED3,HIGH);
+  digitalWrite(LED4,HIGH);
+  digitalWrite(LED5,HIGH);
+
+  //for (int i = 0; i < 10; i++) {
+  for   (int a = 1; a < 6 ; a++)
+  {
+  setLedOn(a);
+  delay(100);
+  }
+
+  for   (int a = 1; a < 6 ; a++)
+  {
+  setLedOff(6-a);
+  delay(100);
+  }
+  
+  delay(200);
+  for   (int a = 1; a < 6 ; a++)
+  {
+  setLedOn(a);
+  }
+  delay(200);
+  for   (int a = 1; a < 6 ; a++)
+  {
+  setLedOff(a);
+  }
+  delay(500);
+  getADC();
+ Serial.print("ADC reading ");
+ Serial.println(sensorValue);
+  if (sensorValue > battLevel1)   {    digitalWrite(LED1, LOW);  }  else  {    digitalWrite(LED1, HIGH);  }
+  if (sensorValue > battLevel2)   {    digitalWrite(LED2, LOW);  }  else  {    digitalWrite(LED2, HIGH);  }
+  if (sensorValue > battLevel3)   {    digitalWrite(LED3, LOW);  }  else  {    digitalWrite(LED3, HIGH);  }
+  if (sensorValue > battLevel4)   {    digitalWrite(LED4, LOW);  }  else  {    digitalWrite(LED4, HIGH);  }
+  if (sensorValue > battLevel5)   {    digitalWrite(LED5, LOW);  }  else  {    digitalWrite(LED5, HIGH);  }
+  delay(5000);
+  for   (int a = 1; a < 6 ; a++)
+  {
+  setLedOff(a);
+  }
+  delay(500);
+
+  setLedOn(1); //Turn on backlight
+}
