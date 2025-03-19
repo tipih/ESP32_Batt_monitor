@@ -47,7 +47,7 @@ double sensorValue = 0;  // variable to store the value coming from the sensor
 #define adc_ajustedment 12.6658
 
 
-#define sleepTimeout              15000
+#define sleepTimeout              150000
 
 
 unsigned long previousMillis1 = 0;
@@ -98,6 +98,7 @@ BLECharacteristic customCharacteristic1(
 //External interrupt from PIN36 reset timeout
 void IRAM_ATTR isr() {
   timeToSleep=0;       //Reset the timeout timer
+  Serial.print("ISR called");
   if((millis()-currenttime <100000 )&&(backLightOn==false))
   {
 
@@ -318,7 +319,7 @@ int getData = -1;
  
   if (currentMillis - previousMillis1 >= timeToBlink) 
   {
-    
+    Serial.println("Blick Led");
     blinkLed();
     previousMillis1 = millis();
   }  
@@ -327,13 +328,20 @@ int getData = -1;
 if (timeToSleep==1){  Serial.println("Restarting timeout");}
 
 
+if (NrbOfAdc==0){
+  setLedLevel(); //TODO
+ NrbOfAdc=1;
+
+}
+
+
 if (currentMillis - previousMillis2 >= updateLedAndBt) 
 {
  //Call functions
  getADC();
  
  if (NrbOfAdc==0){
-   setLedLevel(); //TODO
+  setLedLevel(); //TODO
   NrbOfAdc=1;
 
 }
@@ -358,7 +366,7 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
 delayMicroseconds(100);
 timeToSleep++;
 //Serial.println(timeToSleep);
-if (timeToSleep==sleepTimeout) {
+if (timeToSleep>sleepTimeout) {
 #ifdef debug
  Serial.println("Going to sleep now");
 #endif
@@ -408,7 +416,7 @@ void getADC()
     customCharacteristic1.notify();                        // Notify the client of a change
   }
 
-  setLed(adjustedInputVoltage);   //Set Status LED according voltage
+  //setLed(adjustedInputVoltage);   //Set Status LED according voltage
 }
 /********************************************************************************************/
 
