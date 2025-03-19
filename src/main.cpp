@@ -154,7 +154,12 @@ void print_wakeup_reason() {
 
   switch (wakeup_reason) {
     case ESP_SLEEP_WAKEUP_EXT0:     Serial.println("Wakeup caused by external signal using RTC_IO"); break;
-    case ESP_SLEEP_WAKEUP_EXT1:     Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_EXT1:  {   
+    Serial.println("Wakeup caused by external signal using RTC_CNTL"); 
+    NrbOfWakeUp=10; //Force turn on the backlight
+    timeToSleep=0;       //Reset the timeout timer
+    }
+    break;
     case ESP_SLEEP_WAKEUP_TIMER:    Serial.println("Wakeup caused by timer"); break;
     case ESP_SLEEP_WAKEUP_TOUCHPAD: Serial.println("Wakeup caused by touchpad"); break;
     case ESP_SLEEP_WAKEUP_ULP:      Serial.println("Wakeup caused by ULP program"); break;
@@ -168,9 +173,9 @@ void print_wakeup_reason() {
 //ISR for BTN press
 void checkADC(){
   Serial.println("Function checkADC");
-  NrbOfAdc=0;
+  NrbOfWakeUp=10; //Force turn on the backlight
   timeToSleep=0;       //Reset the timeout timer
-  turnOnBackLight();
+ // turnOnBackLight();
 }
 
 void setLedOn(byte  led)
@@ -288,17 +293,17 @@ void setup() {
   rtc_gpio_pulldown_en(WAKEUP_GPIO);
   //rtc_gpio_pulldown_dis(WAKEUP_GPIO);
 
-#else  // EXT1 WAKEUP
+//#else  // EXT1 WAKEUP
   //If you were to use ext1, you would use it like
-  esp_sleep_enable_ext1_wakeup_io(BUTTON_PIN_BITMASK(WAKEUP_GPIO), ESP_EXT1_WAKEUP_ANY_HIGH);
+  esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK(GPIO_BTN), ESP_EXT1_WAKEUP_ANY_HIGH);
   /*
     If there are no external pull-up/downs, tie wakeup pins to inactive level with internal pull-up/downs via RTC IO
          during deepsleep. However, RTC IO relies on the RTC_PERIPH power domain. Keeping this power domain on will
          increase some power comsumption. However, if we turn off the RTC_PERIPH domain or if certain chips lack the RTC_PERIPH
          domain, we will use the HOLD feature to maintain the pull-up and pull-down on the pins during sleep.
   */
-  rtc_gpio_pulldown_en(WAKEUP_GPIO);  // GPIO33 is tie to GND in order to wake up in HIGH
-  rtc_gpio_pullup_dis(WAKEUP_GPIO);   // Disable PULL_UP in order to allow it to wakeup on HIGH
+  rtc_gpio_pulldown_en(GPIO_BTN);  // GPIO33 is tie to GND in order to wake up in HIGH
+  rtc_gpio_pullup_dis(GPIO_BTN);   // Disable PULL_UP in order to allow it to wakeup on HIGH
 #endif
   //Go to sleep now
 #ifdef debug
@@ -329,6 +334,7 @@ if (timeToSleep==1){  Serial.println("Restarting timeout");}
 
 
 if (NrbOfAdc==0){
+  
   setLedLevel(); //TODO
  NrbOfAdc=1;
 
@@ -340,11 +346,7 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
  //Call functions
  getADC();
  
- if (NrbOfAdc==0){
-  setLedLevel(); //TODO
-  NrbOfAdc=1;
 
-}
 
  previousMillis2 = millis();
 }
@@ -359,6 +361,7 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
 
   if (NrbOfWakeUp>4)
   {
+    Serial.print("Number of wakeup=");
     Serial.println(NrbOfWakeUp);
     turnOnBackLight();
   }
