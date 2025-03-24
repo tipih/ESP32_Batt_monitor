@@ -22,6 +22,8 @@ void setLedPinMode(){
       pinMode(LED3, OUTPUT);
       pinMode(LED4, OUTPUT);
       pinMode(LED5, OUTPUT);
+
+
 }
 
 // Function for the linear adjustment of the ADC.

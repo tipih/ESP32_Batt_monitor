@@ -42,12 +42,14 @@ double sensorValue = 0;  // variable to store the value coming from the sensor
 #define BUTTON_PIN_BITMASK(GPIO) (1ULL << GPIO)  // 2 ^ GPIO_NUMBER in hex
 #define USE_EXT0_WAKEUP          1               // 1 = EXT0 wakeup, 0 = EXT1 wakeup
 #define WAKEUP_GPIO              GPIO_NUM_33     // Only RTC IO are allowed - ESP32 Pin example
-#define GPIO_BTN                 GPIO_NUM_32     //
+#define GPIO_BTN                 GPIO_NUM_32     // ADC BTN
+#define BLINK_LED                GPIO_NUM_18     // Blue LED 1
+#define Back_light               GPIO_NUM_4      // Backlight //TODO CAPITAL LETTERS
 #define debug
-#define adc_ajustedment 12.6658
+#define adc_ajustedment 13.2758
 
 
-#define sleepTimeout              150000
+#define sleepTimeout              550000
 
 
 unsigned long previousMillis1 = 0;
@@ -63,6 +65,7 @@ RTC_DATA_ATTR int bootCount = 0;
 
 void getADC();
 void checkADC();
+void blinkLed();
 void setLedLevel();
 void setLedOn(byte  led);
 void setLedOff(byte  led);
@@ -98,21 +101,21 @@ BLECharacteristic customCharacteristic1(
 //External interrupt from PIN36 reset timeout
 void IRAM_ATTR isr() {
   timeToSleep=0;       //Reset the timeout timer
-  Serial.print("ISR called");
+  //Serial.print("ISR called");
   if((millis()-currenttime <100000 )&&(backLightOn==false))
   {
 
     NrbOfWakeUp++;
-    Serial.print("Movement detected ");
-    Serial.print(millis()-currenttime);
-    Serial.print("   ");
-    Serial.println(NrbOfWakeUp);
+   // Serial.print("Movement detected ");
+   // Serial.print(millis()-currenttime);
+   // Serial.print("   ");
+   // Serial.println(NrbOfWakeUp);
   }
   else if (backLightOn==false){
     NrbOfWakeUp=0;
-    Serial.println("No movement detected, ready for next session");
+    //Serial.println("No movement detected, ready for next session");
     backLightDetect=false;
-    Serial.println(NrbOfWakeUp);
+    //Serial.println(NrbOfWakeUp);
   }
 
 
@@ -174,6 +177,7 @@ void print_wakeup_reason() {
 void checkADC(){
   Serial.println("Function checkADC");
   NrbOfWakeUp=10; //Force turn on the backlight
+  NrbOfAdc=0;
   timeToSleep=0;       //Reset the timeout timer
  // turnOnBackLight();
 }
@@ -216,9 +220,11 @@ void setup() {
   Serial.begin(115200);
   delay(1000);  //Take some time to open up the Serial Monitor
   //setup all pins
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(Back_light, OUTPUT);
+  pinMode(BLINK_LED, OUTPUT);
   pinMode(WAKEUP_GPIO, INPUT);
   pinMode(GPIO_BTN, INPUT);
+  
   
   //Setting LED1-5 for output
   setLedPinMode();
@@ -262,9 +268,9 @@ void setup() {
   Serial.println("Waiting for a Client to connect...");
 
 
-   attachInterrupt(WAKEUP_GPIO, isr, RISING);
-   attachInterrupt(GPIO_BTN, checkADC, HIGH);
-  timeToSleep=0;
+   attachInterrupt(WAKEUP_GPIO, isr, RISING);  // Interrupt for shake sensor
+   attachInterrupt(GPIO_BTN, checkADC, HIGH);  // Interrupt for BTN for ADC and LED
+  timeToSleep=0;                               // Clear the time to sleep flag
   //Increment boot number and print it every reboot
   ++bootCount;
   Serial.println("Boot number: " + String(bootCount));
@@ -345,9 +351,6 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
 {
  //Call functions
  getADC();
- 
-
-
  previousMillis2 = millis();
 }
 
@@ -359,6 +362,7 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
   
   }
 
+  //Window for turning on the backlight this could be ajusted, this will be depending on the sensitivity of the shake module
   if (NrbOfWakeUp>4)
   {
     Serial.print("Number of wakeup=");
@@ -366,7 +370,7 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
     turnOnBackLight();
   }
 
-delayMicroseconds(100);
+delayMicroseconds(100); //Small delay then the timeout will be sleepTimeout*100 = (550000*100 = 50 000 000) + some ADC meassurement = aprox 2 min
 timeToSleep++;
 //Serial.println(timeToSleep);
 if (timeToSleep>sleepTimeout) {
@@ -393,7 +397,7 @@ void getADC()
   // Calculate the adjusted voltage from the adjusted analog input value.
   float adjustedInputVoltage = 3.3 / 4096 * adjustedInputValue;
   float tenCellValue=(adjustedInputVoltage*adc_ajustedment)+0.6559;
-  
+  sensorValue=adjustedInputVoltage;
 #ifdef debug
   Serial.print(timeToSleep);
   Serial.print(" | I new: ");
@@ -401,11 +405,11 @@ void getADC()
   Serial.print(" | V new: ");
   Serial.print(adjustedInputVoltage, 3);
   Serial.print(" | V 10 Cell: ");
-  Serial.print(tenCellValue, 3);
+  Serial.print(tenCellValue, 1);
   Serial.println();
 #endif
 
-  snprintf(buffer, sizeof(buffer), "%.3f", tenCellValue); // .2 specifies 2 decimal places
+  snprintf(buffer, sizeof(buffer), "%.1f", tenCellValue); // .2 specifies 2 decimal places
   snprintf(buffer1, sizeof(buffer1), "%d", timeToSleep); // 
   
   //On send to BTLE if there is a device connected
@@ -428,9 +432,9 @@ void getADC()
 //Blink Led to indicate alive
 void blinkLed()
 {
-  digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
-  delay(50);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);  // turn the LED off by making the voltage LOW
+  digitalWrite(BLINK_LED, HIGH); // turn the LED on (HIGH is the voltage level)
+  delay(100);                       // wait for a second
+  digitalWrite(BLINK_LED, LOW);  // turn the LED off by making the voltage LOW
 }
 /********************************************************************************************/
 
@@ -440,7 +444,8 @@ void turnOnBackLight()
 backLightOn=true;
 NrbOfWakeUp=0;
 Serial.println("Turn on Backlight");
-setLedOn(1);
+//setLedOn(1);
+digitalWrite(Back_light, HIGH); // turn the LED on (HIGH is the voltage level)
 delay(300);
 }
 
@@ -450,7 +455,8 @@ void turnOffBackLight()
   backLightDetect=false;
   NrbOfWakeUp=0;
   Serial.println("Turn off Backlight");
-  setLedOff(1);
+  //setLedOff(1);
+  digitalWrite(Back_light, LOW); // turn the LED on (HIGH is the voltage level)
   delay(300);
 
 
@@ -501,8 +507,10 @@ void setLedLevel()
   for   (int a = 1; a < 6 ; a++)
   {
   setLedOff(a);
+  //setLedOn(a); //For debugging on setup do to reverse setup
+
   }
   delay(500);
 
-  setLedOn(1); //Turn on backlight
+  turnOnBackLight();
 }
