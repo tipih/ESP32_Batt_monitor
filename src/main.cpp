@@ -41,15 +41,26 @@ double sensorValue = 0;  // variable to store the value coming from the sensor
 
 #define BUTTON_PIN_BITMASK(GPIO) (1ULL << GPIO)  // 2 ^ GPIO_NUMBER in hex
 #define USE_EXT0_WAKEUP          1               // 1 = EXT0 wakeup, 0 = EXT1 wakeup
-#define WAKEUP_GPIO              GPIO_NUM_33     // Only RTC IO are allowed - ESP32 Pin example
-#define GPIO_BTN                 GPIO_NUM_32     // ADC BTN
-#define BLINK_LED                GPIO_NUM_18     // Blue LED 1
+
+#ifdef ARDUINO_ESP32S3_DEV
+ #define WAKEUP_GPIO              GPIO_NUM_7     // Only RTC IO are allowed - ESP32 Pin example
+ #define GPIO_BTN                 GPIO_NUM_8     // ADC BTN
+ #define RGB_BRIGHTNESS           10             // Change white brightness (max 255)
+ #define BLINK_LED                GPIO_NUM_21    // Blue LED 21
+ #else
+ #define BLINK_LED                GPIO_NUM_18     // Blue LED 1
+ #define WAKEUP_GPIO              GPIO_NUM_33     // Only RTC IO are allowed - ESP32 Pin example
+ #define GPIO_BTN                 GPIO_NUM_32     // ADC BTN
+ #define LED_PIN 
+#endif
+
+//#define BLINK_LED                GPIO_NUM_18     // Blue LED 1
 #define Back_light               GPIO_NUM_4      // Backlight //TODO CAPITAL LETTERS
 #define debug
 #define adc_ajustedment 13.2758
 
 
-#define sleepTimeout              550000
+#define sleepTimeout              50000
 
 
 unsigned long previousMillis1 = 0;
@@ -58,8 +69,12 @@ const long timeToBlink = 200; // Interval for function1 (1 second)
 const long updateLedAndBt = 2000; // Interval for function2 (2 seconds)
 
 
-
+#ifdef ARDUINO_ESP32S3_DEV
+ const byte pinNumber = 1; //Pin for ADC meassurement
+#else
 const byte pinNumber = 36; //Pin for ADC meassurement
+#endif
+
 unsigned long timeToSleep;
 RTC_DATA_ATTR int bootCount = 0;
 
@@ -219,19 +234,33 @@ default:
 void setup() {
   Serial.begin(115200);
   delay(1000);  //Take some time to open up the Serial Monitor
+  Serial.println("Step 1");
   //setup all pins
   pinMode(Back_light, OUTPUT);
   pinMode(BLINK_LED, OUTPUT);
   pinMode(WAKEUP_GPIO, INPUT);
   pinMode(GPIO_BTN, INPUT);
-  
+
+
+
+Serial.println("Pin set");
+
+
+
   
   //Setting LED1-5 for output
   setLedPinMode();
 
-  // Create and name the BLE Device
-  BLEDevice::init("Bike_Batt");
+  Serial.println("Pin set");
+  delay (5000);
 
+
+  // Create and name the BLE Device
+  #ifdef ARDUINO_ESP32S3_DEV
+  BLEDevice::init("Bike_Batt_zero");
+  #else
+   BLEDevice::init("Bike_Batt");
+  #endif
   /* Create the BLE Server */
   BLEServer *MyServer = BLEDevice::createServer();
   MyServer->setCallbacks(new ServerCallbacks());  // Set the function that handles Server Callbacks
@@ -378,10 +407,26 @@ if (timeToSleep>sleepTimeout) {
  Serial.println("Going to sleep now");
 #endif
 
+#ifdef ARDUINO_ESP32S3_DEV
+neopixelWrite(BLINK_LED,0,0,0); // Red
+delay(100);
+gpio_reset_pin(GPIO_NUM_7);
+gpio_reset_pin(GPIO_NUM_8);
+gpio_reset_pin(GPIO_NUM_21);
+gpio_reset_pin(GPIO_NUM_4);
+gpio_reset_pin(GPIO_NUM_5);
+gpio_reset_pin(GPIO_NUM_12);
+
+gpio_reset_pin(GPIO_NUM_13);
+gpio_reset_pin(GPIO_NUM_14);
+gpio_reset_pin(GPIO_NUM_15);
+#else
+
  setPin(34);
  gpio_hold_en(GPIO_NUM_2);
  gpio_deep_sleep_hold_en();
-  esp_deep_sleep_start();
+ #endif 
+ esp_deep_sleep_start();
  }
 }
 
@@ -432,9 +477,15 @@ void getADC()
 //Blink Led to indicate alive
 void blinkLed()
 {
-  digitalWrite(BLINK_LED, HIGH); // turn the LED on (HIGH is the voltage level)
-  delay(100);                       // wait for a second
-  digitalWrite(BLINK_LED, LOW);  // turn the LED off by making the voltage LOW
+  #ifdef ARDUINO_ESP32S3_DEV
+  neopixelWrite(BLINK_LED,0,0,RGB_BRIGHTNESS); // Red
+  delay(100);
+  neopixelWrite(BLINK_LED,0,0,0); // Red
+  #else
+   digitalWrite(BLINK_LED, HIGH); // turn the LED on (HIGH is the voltage level)
+   delay(100);                       // wait for a second
+   digitalWrite(BLINK_LED, LOW);  // turn the LED off by making the voltage LOW
+  #endif
 }
 /********************************************************************************************/
 
