@@ -23,11 +23,7 @@
 */
 #include "driver/rtc_io.h"
 
-//Include BLE libs
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
-#include <BLE2902.h>
+
 #include <test.h>
 #include <ble.h>
 
@@ -100,27 +96,8 @@ void turnOnBackLight();
 void turnOffBackLight();
 
 
-/********************************************************************************************/
-/* Define the UUID for our Custom Service */
-#define serviceID BLEUUID((uint16_t)0x1700)
-/********************************************************************************************/
 
 
-/********************************************************************************************/
-/* Define our custom characteristic along with it's properties */
-BLECharacteristic customCharacteristic(
-  BLEUUID((uint16_t)0x1A00), 
-  BLECharacteristic::PROPERTY_READ | 
-  BLECharacteristic::PROPERTY_NOTIFY
-);
-BLECharacteristic customCharacteristic1(
-  BLEUUID((uint16_t)0x1A01), 
-  BLECharacteristic::PROPERTY_READ | 
-  BLECharacteristic::PROPERTY_NOTIFY |
-  BLECharacteristic::PROPERTY_WRITE
-
-);
-/********************************************************************************************/
 
 /********************************************************************************************/
 /*
@@ -181,43 +158,6 @@ void IRAM_ATTR isr() {
 
 
 
-/********************************************************************************************/
-/* This function handles the server callbacks */
-bool deviceConnected = false;
-class ServerCallbacks: public BLEServerCallbacks {
-    void onConnect(BLEServer* MyServer) {
-      deviceConnected = true;
-      Serial.println("Connection created");
-      MyServer->startAdvertising();
-    };
-
-    void onDisconnect(BLEServer* MyServer) {
-      deviceConnected = false;
-      Serial.println("Device disconnected");
-      MyServer->startAdvertising();
-    }
-};
-/********************************************************************************************/
-
-
-class BLE_GetData: public BLECharacteristicCallbacks {
-  
-  void onWrite(BLECharacteristic *pCharacteristic) 
-  {
-    std::string rxValue = pCharacteristic->getValue();
-    Serial.print("value received = ");
-    Serial.println(rxValue.c_str());
-    //TRYING TO USE ATOI
-    int n = atoi(rxValue.c_str());
-    Serial.print("ATOI result = ");
-    Serial.println(n);
-
-    if (n>10000){
-      sleepTimeout = n;
-    }
-
- }
-};
 
 
 /********************************************************************************************/
@@ -284,53 +224,6 @@ Serial.println("Pin set");
   //Setting LED1-5 for output
   setLedPinMode();
   ble_init();
- 
-
-
-  // Create and name the BLE Device
-  #ifdef ARDUINO_ESP32S3_DEV
-  BLEDevice::init("Bike_Batt_zero");
-  #else
-   //BLEDevice::init("Bike_Batt");
-  #endif
-  /* Create the BLE Server */
-  //BLEServer *MyServer = BLEDevice::createServer();
-  //MyServer->setCallbacks(new ServerCallbacks());  // Set the function that handles Server Callbacks
-
-  /* Add a service to our server */
-  //LEService *customService = MyServer->createService(BLEUUID((uint16_t)0x1700)); //  A random ID has been selected
-
-  /* Add a characteristic to the service */
-  //customService->addCharacteristic(&customCharacteristic);  //customCharacteristic was defined above
-  /* Add a characteristic to the service */
-  //customService->addCharacteristic(&customCharacteristic1);  //customCharacteristic was defined above
-  
-  
-
-
-  /* Add Descriptors to the Characteristic*/
-  //customCharacteristic.addDescriptor(new BLE2902());  //Add this line only if the characteristic has the Notify property
-  //customCharacteristic1.addDescriptor(new BLE2902());  //Add this line only if the characteristic has the Notify property
-
-  //BLEDescriptor VariableDescriptor(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
-  //VariableDescriptor.setValue("Show Battery Voltage");          /* Use this format to add a hint for the user. This is optional. */
-  //customCharacteristic.addDescriptor(&VariableDescriptor);    /*```````````````````````````````````````````````````````````````*/
-
-  //customCharacteristic1.setCallbacks(my_BTLE_Callback);
-
-  //BLEDescriptor VariableDescriptor1(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
-  //VariableDescriptor1.setValue("Show timeout");          /* Use this format to add a hint for the user. This is optional. */
-  //customCharacteristic1.addDescriptor(&VariableDescriptor1);   
-
-  /* Configure Advertising with the Services to be advertised */
-  //MyServer->getAdvertising()->addServiceUUID(serviceID);
-
-  // Start the service
-  //customService->start();
-
-  // Start the Server/Advertising
- // MyServer->getAdvertising()->start();
-
 
 
   Serial.println("Waiting for a Client to connect...");
@@ -505,15 +398,9 @@ void getADC()
   if (isConnected)
   {
     /* Set the value */
-    // customCharacteristic.setValue((float&)adjustedInputVoltage);
     
     ble_update_timeout((std::string)buffer1);
     ble_update_voltage((std::string)buffer);
-    //customCharacteristic.setValue((std::string)buffer);   //Set the string
-    //customCharacteristic.notify();                        // Notify the client of a change
-    //customCharacteristic1.setValue((std::string)buffer1);   //Set the string
-    //customCharacteristic1.notify();                        // Notify the client of a change
-
   }
 
   //setLed(adjustedInputVoltage);   //Set Status LED according voltage
