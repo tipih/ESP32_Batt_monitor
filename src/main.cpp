@@ -29,7 +29,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <test.h>
-//#include <ble.h>
+#include <ble.h>
 
 
 volatile byte NrbOfAdc = 0;                     //Variable to handle reading of ADC, set inside interrupt
@@ -283,7 +283,7 @@ Serial.println("Pin set");
   
   //Setting LED1-5 for output
   setLedPinMode();
-
+  ble_init();
  
 
 
@@ -502,14 +502,18 @@ void getADC()
   snprintf(buffer1, sizeof(buffer1), "%d", timeToSleep); // 
   
   //On send to BTLE if there is a device connected
-  if (deviceConnected)
+  if (isConnected)
   {
     /* Set the value */
     // customCharacteristic.setValue((float&)adjustedInputVoltage);
-    customCharacteristic.setValue((std::string)buffer);   //Set the string
-    customCharacteristic.notify();                        // Notify the client of a change
-    customCharacteristic1.setValue((std::string)buffer1);   //Set the string
-    customCharacteristic1.notify();                        // Notify the client of a change
+    
+    ble_update_timeout((std::string)buffer1);
+    ble_update_voltage((std::string)buffer);
+    //customCharacteristic.setValue((std::string)buffer);   //Set the string
+    //customCharacteristic.notify();                        // Notify the client of a change
+    //customCharacteristic1.setValue((std::string)buffer1);   //Set the string
+    //customCharacteristic1.notify();                        // Notify the client of a change
+
   }
 
   //setLed(adjustedInputVoltage);   //Set Status LED according voltage

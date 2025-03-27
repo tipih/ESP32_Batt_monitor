@@ -10,8 +10,10 @@ extern unsigned long sleep_timer;
 extern bool isConnected;
 
 void ble_init();
-void ble_send_data(const std::string& data);
+void ble_update_timeout(const std::string& data);
+void ble_update_voltage(const std::string& data);
 
+void onCharWrite(BLECharacteristic* characteristic);
 
 class MyServerCallbacks : public BLEServerCallbacks
 {
