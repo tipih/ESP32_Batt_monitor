@@ -29,6 +29,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <test.h>
+#include <ble.h>
 
 
 volatile byte NrbOfAdc = 0;                     //Variable to handle reading of ADC, set inside interrupt
@@ -443,7 +444,10 @@ delayMicroseconds(100); //Small delay then the timeout will be sleepTimeout*100 
 timeToSleep++;
 //Serial.println(timeToSleep);
 if (timeToSleep>sleepTimeout) {
-#ifdef debug
+  digitalWrite(BLINK_LED, LOW);  // turn the LED off by making the voltage LOW
+  delay(1000);
+  digitalWrite(BLINK_LED, HIGH);  // turn the LED off by making the voltage LOW
+  #ifdef debug
  Serial.println("Going to sleep now");
 #endif
 
@@ -462,9 +466,9 @@ gpio_reset_pin(GPIO_NUM_14);
 gpio_reset_pin(GPIO_NUM_15);
 #else
 
- setPin(34);
- gpio_hold_en(GPIO_NUM_2);
- gpio_deep_sleep_hold_en();
+ //setPin(34);
+ //gpio_hold_en(GPIO_NUM_2);
+ //gpio_deep_sleep_hold_en();
  #endif 
  esp_deep_sleep_start();
  }
