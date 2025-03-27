@@ -26,6 +26,7 @@
 
 #include <test.h>
 #include <ble.h>
+#include <hw.h>
 
 
 volatile byte NrbOfAdc = 0;                     //Variable to handle reading of ADC, set inside interrupt
@@ -36,33 +37,10 @@ volatile unsigned int NrbOfWakeUp = 0;
 double sensorValue = 0;  // variable to store the value coming from the sensor
 
 
-#define BUTTON_PIN_BITMASK(GPIO) (1ULL << GPIO)  // 2 ^ GPIO_NUMBER in hex
-#define USE_EXT0_WAKEUP          1               // 1 = EXT0 wakeup, 0 = EXT1 wakeup
 
 
-/********************************************************************************************/
-//All defined in test.h
-//#define LED1                     GPIO_NUM_5
-//#define LED2                     GPIO_NUM_12
-//#define LED3                     GPIO_NUM_13
-//#define LED4                     GPIO_NUM_14
-//#define LED5                     GPIO_NUM_15
-/********************************************************************************************/
-#ifdef ARDUINO_ESP32S3_DEV
- #define WAKEUP_GPIO              GPIO_NUM_7     // Only RTC IO are allowed - ESP32 Pin example
- #define GPIO_BTN                 GPIO_NUM_8     // ADC BTN
- #define RGB_BRIGHTNESS           10             // Change white brightness (max 255)
- #define BLINK_LED                GPIO_NUM_21    // Blue LED 21
- #else
- //#define BLINK_LED                GPIO_NUM_18     // Blue LED 1 EZC
- #define BLINK_LED                GPIO_NUM_2     // Blue LED 2 firebeatle
- #define WAKEUP_GPIO              GPIO_NUM_33     // Only RTC IO are allowed - ESP32 Pin example
- #define GPIO_BTN                 GPIO_NUM_25     // ADC BTN
- #define LED_PIN 
-#endif
 
-//#define BLINK_LED                GPIO_NUM_18     // Blue LED 1
-#define Back_light               GPIO_NUM_4      // Backlight //TODO CAPITAL LETTERS
+
 #define debug
 #define adc_ajustedment 13.2758
 
@@ -76,12 +54,7 @@ const long timeToBlink = 1000;                   // Interval for function1 (1 se
 const long updateLedAndBt = 2000;               // Interval for function2 (2 seconds)
 
 
-#ifdef ARDUINO_ESP32S3_DEV
- const byte pinNumber = 1; //Pin for ADC meassurement
-#else
-const byte pinNumber = 36; //Pin for ADC meassurement
-//const byte pinNumber = 18; //Pin for ADC meassurement
-#endif
+
 
 unsigned long timeToSleep;
 RTC_DATA_ATTR int bootCount = 0;

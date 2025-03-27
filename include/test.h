@@ -1,9 +1,4 @@
 
-#define LED1                     GPIO_NUM_5
-#define LED2                     GPIO_NUM_12
-#define LED3                     GPIO_NUM_13
-#define LED4                     GPIO_NUM_14
-#define LED5                     GPIO_NUM_15
 
 #define multiplecell //singlecell //multiplecell 
 

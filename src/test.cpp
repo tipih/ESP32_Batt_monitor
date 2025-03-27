@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "test.h"
+#include "hw.h"
 
 
 void setPin(int setPin){
