@@ -11,13 +11,17 @@ extern bool isConnected;
 
 void ble_init();
 void ble_send_data(const std::string& data);
-void ble_on_receive(BLECharacteristic* characteristic);
+
 
 class MyServerCallbacks : public BLEServerCallbacks
 {
-    void onConnect(BLEServer* pServer);
-    void onDisconnect(BLEServer* pServer);
+    void onConnect(BLEServer* pServer) override; 
+    void onDisconnect(BLEServer* pServer) override;
 };
+
+
+class MyCharacteristicCallbacks : public BLECharacteristicCallbacks{
+    void onWrite(BLECharacteristic* characteristic) override;
+};
+
 #endif //BLE_H
-
-

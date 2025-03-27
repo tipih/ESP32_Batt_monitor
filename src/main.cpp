@@ -29,7 +29,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <test.h>
-#include <ble.h>
+//#include <ble.h>
 
 
 volatile byte NrbOfAdc = 0;                     //Variable to handle reading of ADC, set inside interrupt
@@ -273,7 +273,7 @@ void setup() {
   pinMode(BLINK_LED, OUTPUT);
   pinMode(WAKEUP_GPIO, INPUT);
   pinMode(GPIO_BTN, INPUT_PULLDOWN);
-  BLECharacteristicCallbacks *my_BTLE_Callback = new BLE_GetData();
+  //BLECharacteristicCallbacks *my_BTLE_Callback = new BLE_GetData();
 
 
 Serial.println("Pin set");
@@ -291,45 +291,45 @@ Serial.println("Pin set");
   #ifdef ARDUINO_ESP32S3_DEV
   BLEDevice::init("Bike_Batt_zero");
   #else
-   BLEDevice::init("Bike_Batt");
+   //BLEDevice::init("Bike_Batt");
   #endif
   /* Create the BLE Server */
-  BLEServer *MyServer = BLEDevice::createServer();
-  MyServer->setCallbacks(new ServerCallbacks());  // Set the function that handles Server Callbacks
+  //BLEServer *MyServer = BLEDevice::createServer();
+  //MyServer->setCallbacks(new ServerCallbacks());  // Set the function that handles Server Callbacks
 
   /* Add a service to our server */
-  BLEService *customService = MyServer->createService(BLEUUID((uint16_t)0x1700)); //  A random ID has been selected
+  //LEService *customService = MyServer->createService(BLEUUID((uint16_t)0x1700)); //  A random ID has been selected
 
   /* Add a characteristic to the service */
-  customService->addCharacteristic(&customCharacteristic);  //customCharacteristic was defined above
+  //customService->addCharacteristic(&customCharacteristic);  //customCharacteristic was defined above
   /* Add a characteristic to the service */
-  customService->addCharacteristic(&customCharacteristic1);  //customCharacteristic was defined above
+  //customService->addCharacteristic(&customCharacteristic1);  //customCharacteristic was defined above
   
   
 
 
   /* Add Descriptors to the Characteristic*/
-  customCharacteristic.addDescriptor(new BLE2902());  //Add this line only if the characteristic has the Notify property
-  customCharacteristic1.addDescriptor(new BLE2902());  //Add this line only if the characteristic has the Notify property
+  //customCharacteristic.addDescriptor(new BLE2902());  //Add this line only if the characteristic has the Notify property
+  //customCharacteristic1.addDescriptor(new BLE2902());  //Add this line only if the characteristic has the Notify property
 
-  BLEDescriptor VariableDescriptor(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
-  VariableDescriptor.setValue("Show Battery Voltage");          /* Use this format to add a hint for the user. This is optional. */
-  customCharacteristic.addDescriptor(&VariableDescriptor);    /*```````````````````````````````````````````````````````````````*/
+  //BLEDescriptor VariableDescriptor(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
+  //VariableDescriptor.setValue("Show Battery Voltage");          /* Use this format to add a hint for the user. This is optional. */
+  //customCharacteristic.addDescriptor(&VariableDescriptor);    /*```````````````````````````````````````````````````````````````*/
 
-  customCharacteristic1.setCallbacks(my_BTLE_Callback);
+  //customCharacteristic1.setCallbacks(my_BTLE_Callback);
 
-  BLEDescriptor VariableDescriptor1(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
-  VariableDescriptor1.setValue("Show timeout");          /* Use this format to add a hint for the user. This is optional. */
-  customCharacteristic1.addDescriptor(&VariableDescriptor1);   
+  //BLEDescriptor VariableDescriptor1(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
+  //VariableDescriptor1.setValue("Show timeout");          /* Use this format to add a hint for the user. This is optional. */
+  //customCharacteristic1.addDescriptor(&VariableDescriptor1);   
 
   /* Configure Advertising with the Services to be advertised */
-  MyServer->getAdvertising()->addServiceUUID(serviceID);
+  //MyServer->getAdvertising()->addServiceUUID(serviceID);
 
   // Start the service
-  customService->start();
+  //customService->start();
 
   // Start the Server/Advertising
-  MyServer->getAdvertising()->start();
+ // MyServer->getAdvertising()->start();
 
 
 

@@ -2,12 +2,13 @@
 
 
 #include "ble.h"
-#include <BLEDevice.h>
-#include <BLEUtils.h>
 #include <BLEServer.h>
 
-BLEServer* bleServer;
+
+
+
 BLEService* bleService;
+BLEServer* bleServer;
 BLECharacteristic* bleCharacteristic;
 BLECharacteristic* bleCharacteristic1;
 unsigned long sleep_timer = 300000; //Init of global var
@@ -15,12 +16,13 @@ bool isConnected=false;
 
 
 
-void ble_on_receive(BLECharacteristic* characteristic){
+
+
+void MyCharacteristicCallbacks::onWrite(BLECharacteristic* characteristic){
     std::string receivedData = characteristic->getValue();
     Serial.println("Received data");
     Serial.println(receivedData.c_str());
     sleep_timer = atoi(receivedData.c_str());
-
 }
 
 void MyServerCallbacks::onConnect(BLEServer* pServer){
@@ -47,6 +49,9 @@ void ble_init(){
     bleCharacteristic = bleService->createCharacteristic(    BLEUUID((uint16_t)0x1A00), 
     BLECharacteristic::PROPERTY_READ | 
     BLECharacteristic::PROPERTY_NOTIFY);
+
+    bleCharacteristic1->setCallbacks(new MyCharacteristicCallbacks());
+
 }
 
 
