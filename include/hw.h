@@ -1,3 +1,6 @@
+/*Michael Rahr 03-28-2025
+Define all platform specific IO
+*/
 #include "Arduino.h"
 #ifndef HW_H
 #define HW_H
@@ -27,15 +30,34 @@
 #define LED5                     GPIO_NUM_15
 
 #ifdef ARDUINO_ESP32S3_DEV
- const byte pinNumber = 1; //Pin for ADC meassurement
+ const byte ADCPIN = 1; //Pin for ADC meassurement
 #else
-const byte pinNumber = 36; //Pin for ADC meassurement
-//const byte pinNumber = 18; //Pin for ADC meassurement
+
+const byte ADCPIN = 36; //Pin for ADC meassurement
 #endif
 
 
 //#define BLINK_LED                GPIO_NUM_18     // Blue LED 1
 #define Back_light               GPIO_NUM_4      // Backlight //TODO CAPITAL LETTERS
+
+#define multiplecell //singlecell //multiplecell 
+
+#ifdef multiplecell //Voltage using a voltage devider
+#define battLevel1                2.5
+#define battLevel2                2.6
+#define battLevel3                2.7
+#define battLevel4                2.9
+#define battLevel5                3.0
+#endif
+
+#ifdef singlecell
+#define battLevel1                2.9
+#define battLevel2                3.1
+#define battLevel3                3.5
+#define battLevel4                3.9
+#define battLevel5                4.1
+#endif
+
 
 
 #endif

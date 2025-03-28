@@ -1,4 +1,11 @@
-#include <Arduino.h>
+/*Michael Rahr 03-28-2025
+Handle ADC reading and return a compensated value, it will compensate for the non liner ADC of the ESP32
+Credit to below
+*/
+
+
+
+
 /*
   Deep Sleep with External Wake Up
   =====================================
@@ -21,12 +28,13 @@
   Author:
   Pranav Cherukupalli <cherukupallip@gmail.com>
 */
+
+#include <Arduino.h>
 #include "driver/rtc_io.h"
-
-
-#include <test.h>
+#include <adcread.h>
 #include <ble.h>
 #include <hw.h>
+#include <led.h>
 
 
 volatile byte NrbOfAdc = 0;                     //Variable to handle reading of ADC, set inside interrupt
@@ -43,6 +51,7 @@ double sensorValue = 0;  // variable to store the value coming from the sensor
 
 #define debug
 #define adc_ajustedment 13.2758
+#define shakeDetectionTimeout 200000
 
 
 unsigned long sleepTimeout  =   5550000;
@@ -50,29 +59,21 @@ unsigned long sleepTimeout  =   5550000;
 
 unsigned long previousMillis1 = 0;              //Variable to meassure LED blinking time
 unsigned long previousMillis2 = 0;              //Variable to for BTLE broadcast and ADC reading
-const long timeToBlink = 1000;                   // Interval for function1 (1 second)
+const long timeToBlink = 1000;                  // Interval for function1 (1 second)
 const long updateLedAndBt = 2000;               // Interval for function2 (2 seconds)
-
-
-
 
 unsigned long timeToSleep;
 RTC_DATA_ATTR int bootCount = 0;
 
 void getADC();
 void checkADC();
-void blinkLed();
-void setLedLevel();
-void setLedOn(byte  led);
-void setLedOff(byte  led);
-void turnOnBackLight();
-void turnOffBackLight();
 
 
 
 
 
-/********************************************************************************************/
+
+
 /*
   Method to print the reason by which ESP32
   has been awaken from sleep
@@ -96,84 +97,37 @@ void print_wakeup_reason() {
     default:                        Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
   }
 }
-/********************************************************************************************/
 
 
 
 
-/********************************************************************************************/
-//External interrupt from PIN36 reset timeout
+//External interrupt from reset timeout
 void IRAM_ATTR isr() {
   timeToSleep=0;       //Reset the timeout timer
-  //Serial.print("ISR called");
-  if((millis()-currenttime <100000 )&&(backLightOn==false))
-  {
+  
 
+  //Window for shake detection 
+  if((millis()-currenttime <shakeDetectionTimeout )&&(backLightOn==false))
+  {
     NrbOfWakeUp++;
-   // Serial.print("Movement detected ");
-   // Serial.print(millis()-currenttime);
-   // Serial.print("   ");
-   // Serial.println(NrbOfWakeUp);
+    //TODO check if this is working ok
   }
   else if (backLightOn==false){
     NrbOfWakeUp=0;
-    //Serial.println("No movement detected, ready for next session");
     backLightDetect=false;
-    //Serial.println(NrbOfWakeUp);
   }
-
-
-
-//Serial.println("ISR detected");
 }
-/********************************************************************************************/
 
 
-
-
-
-
-/********************************************************************************************/
-//ISR for BTN press
+//ISR for BTN press, will also trigger a wakeup
 void checkADC(){
-  Serial.println("Function checkADC");
-  NrbOfWakeUp=10; //Force turn on the backlight
-  NrbOfAdc=0;
+  NrbOfWakeUp=10;      //Force turn on the backlight
+  NrbOfAdc=0;          //Trigger ADC reading
   timeToSleep=0;       //Reset the timeout timer
- // turnOnBackLight();
+ 
 }
 
-void setLedOn(byte  led)
-{
-Serial.print("Led on ");
-Serial.println(led);
-switch (led)
-{
-case 1:digitalWrite(LED1, LOW);  break;
-case 2:digitalWrite(LED2, LOW);  break;
-case 3:digitalWrite(LED3, LOW);  break;
-case 4:digitalWrite(LED4, LOW);  break;
-case 5:digitalWrite(LED5, LOW);  break;
-default:
-  break;
-}
-}
 
-void setLedOff(byte  led)
-{
-  Serial.print("Led off ");
-  Serial.println(led);  
-switch (led)
-{
-case 1:digitalWrite(LED1, HIGH);  break;
-case 2:digitalWrite(LED2, HIGH);  break;
-case 3:digitalWrite(LED3, HIGH);  break;
-case 4:digitalWrite(LED4, HIGH);  break;
-case 5:digitalWrite(LED5, HIGH);  break;
-default:
-  break;
-}
-}
 
 
 /********************************************************************************************/
@@ -181,30 +135,21 @@ void setup() {
   Serial.begin(115200);
   delay(1000);  //Take some time to open up the Serial Monitor
   Serial.println("Step 1");
-  //setup all pins
-  pinMode(Back_light, OUTPUT);
-  pinMode(BLINK_LED, OUTPUT);
+
+  //setup all none LED pins
   pinMode(WAKEUP_GPIO, INPUT);
   pinMode(GPIO_BTN, INPUT_PULLDOWN);
-  //BLECharacteristicCallbacks *my_BTLE_Callback = new BLE_GetData();
+  pinMode(Back_light, OUTPUT);
 
-
-Serial.println("Pin set");
-
-
-
-  
-  //Setting LED1-5 for output
-  setLedPinMode();
-  ble_init();
-
-
+  setLedPinMode();    //Setting LED1-5 for output
+  ble_init();         //Setup the BLE server
   Serial.println("Waiting for a Client to connect...");
 
 
-   attachInterrupt(WAKEUP_GPIO, isr, RISING);  // Interrupt for shake sensor
-   attachInterrupt(GPIO_BTN, checkADC, RISING);  // Interrupt for BTN for ADC and LED
-  timeToSleep=0;                               // Clear the time to sleep flag
+  attachInterrupt(WAKEUP_GPIO, isr, RISING);    // Interrupt for shake sensor
+  attachInterrupt(GPIO_BTN, checkADC, RISING);  // Interrupt for BTN for ADC and LED
+  timeToSleep=0;                                // Clear the time to sleep flag
+  
   //Increment boot number and print it every reboot
   ++bootCount;
   Serial.println("Boot number: " + String(bootCount));
@@ -238,9 +183,9 @@ Serial.println("Pin set");
   esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK(GPIO_BTN), ESP_EXT1_WAKEUP_ANY_HIGH);
   /*
     If there are no external pull-up/downs, tie wakeup pins to inactive level with internal pull-up/downs via RTC IO
-         during deepsleep. However, RTC IO relies on the RTC_PERIPH power domain. Keeping this power domain on will
-         increase some power comsumption. However, if we turn off the RTC_PERIPH domain or if certain chips lack the RTC_PERIPH
-         domain, we will use the HOLD feature to maintain the pull-up and pull-down on the pins during sleep.
+    during deepsleep. However, RTC IO relies on the RTC_PERIPH power domain. Keeping this power domain on will
+    increase some power comsumption. However, if we turn off the RTC_PERIPH domain or if certain chips lack the RTC_PERIPH
+    domain, we will use the HOLD feature to maintain the pull-up and pull-down on the pins during sleep.
   */
   rtc_gpio_pulldown_en(GPIO_BTN);  // GPIO33 is tie to GND in order to wake up in HIGH
   rtc_gpio_pullup_dis(GPIO_BTN);   // Disable PULL_UP in order to allow it to wakeup on HIGH
@@ -256,14 +201,14 @@ Serial.println("Pin set");
 
 
 
-
+//Main loop mainly used of millis to avoid delay
 void loop() {
 unsigned long currentMillis = millis();
 int getData = -1;
 //Serial.println("Loop");
-  //This is not going to be called
+//This is not going to be called
 
- 
+
   if (currentMillis - previousMillis1 >= timeToBlink) 
   {
     Serial.println("Blick Led");
@@ -275,14 +220,14 @@ int getData = -1;
 if (timeToSleep==1){  Serial.println("Restarting timeout");}
 
 
+//Check if should invoke the LED indicators
 if (NrbOfAdc==0){
-  
-  setLedLevel(); //TODO
- NrbOfAdc=1;
-
+setLedLevel(); //TODO
+NrbOfAdc=1;
 }
 
 
+//Regolary check the Batt level
 if (currentMillis - previousMillis2 >= updateLedAndBt) 
 {
  //Call functions
@@ -295,7 +240,7 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
   {
     Serial.println("Ready for movement detection");
     backLightDetect=true;
-  
+    currenttime=millis();
   }
 
   //Window for turning on the backlight this could be ajusted, this will be depending on the sensitivity of the shake module
@@ -304,6 +249,8 @@ if (currentMillis - previousMillis2 >= updateLedAndBt)
     Serial.print("Number of wakeup=");
     Serial.println(NrbOfWakeUp);
     turnOnBackLight();
+    backLightOn=true;
+    NrbOfWakeUp=0;
   }
 
 delayMicroseconds(100); //Small delay then the timeout will be sleepTimeout*100 = (550000*100 = 50 000 000) + some ADC meassurement = aprox 2 min
@@ -348,7 +295,7 @@ void getADC()
   char buffer[14];
   char buffer1[14];
   // Get the adjusted input value with the help of the 'analogReadAdjusted' function.
-  float adjustedInputValue = analogReadAdjusted(pinNumber);
+  float adjustedInputValue = analogReadAdjusted(ADCPIN);
   // Calculate the adjusted voltage from the adjusted analog input value.
   float adjustedInputVoltage = 3.3 / 4096 * adjustedInputValue;
   float tenCellValue=(adjustedInputVoltage*adc_ajustedment)+0.6559;
@@ -368,6 +315,7 @@ void getADC()
   snprintf(buffer1, sizeof(buffer1), "%d", timeToSleep); // 
   
   //On send to BTLE if there is a device connected
+  //TODO do not use isConnected here, should be move to ble functions
   if (isConnected)
   {
     /* Set the value */
@@ -381,95 +329,7 @@ void getADC()
 /********************************************************************************************/
 
 
-/********************************************************************************************/
-//Blink Led to indicate alive
-void blinkLed()
-{
-  #ifdef ARDUINO_ESP32S3_DEV
-  neopixelWrite(BLINK_LED,0,0,RGB_BRIGHTNESS); // Red
-  delay(100);
-  neopixelWrite(BLINK_LED,0,0,0); // Red
-  #else
-   digitalWrite(BLINK_LED, HIGH); // turn the LED on (HIGH is the voltage level)
-   delay(100);                       // wait for a second
-   digitalWrite(BLINK_LED, LOW);  // turn the LED off by making the voltage LOW
-  #endif
-}
-/********************************************************************************************/
 
 
-void turnOnBackLight()
-{
-backLightOn=true;
-NrbOfWakeUp=0;
-Serial.println("Turn on Backlight");
-//setLedOn(1);
-digitalWrite(Back_light, HIGH); // turn the LED on (HIGH is the voltage level)
-delay(300);
-}
-
-void turnOffBackLight()
-{
-  backLightOn=false;
-  backLightDetect=false;
-  NrbOfWakeUp=0;
-  Serial.println("Turn off Backlight");
-  //setLedOff(1);
-  digitalWrite(Back_light, LOW); // turn the LED on (HIGH is the voltage level)
-  delay(300);
 
 
-}
-
-void setLedLevel()
-{
-
-  digitalWrite(LED1,HIGH);
-  digitalWrite(LED2,HIGH);
-  digitalWrite(LED3,HIGH);
-  digitalWrite(LED4,HIGH);
-  digitalWrite(LED5,HIGH);
-
-  //for (int i = 0; i < 10; i++) {
-  for   (int a = 1; a < 6 ; a++)
-  {
-  setLedOn(a);
-  delay(100);
-  }
-
-  for   (int a = 1; a < 6 ; a++)
-  {
-  setLedOff(6-a);
-  delay(100);
-  }
-  
-  delay(200);
-  for   (int a = 1; a < 6 ; a++)
-  {
-  setLedOn(a);
-  }
-  delay(200);
-  for   (int a = 1; a < 6 ; a++)
-  {
-  setLedOff(a);
-  }
-  delay(500);
-  getADC();
- Serial.print("ADC reading ");
- Serial.println(sensorValue);
-  if (sensorValue > battLevel1)   {    digitalWrite(LED1, LOW);  }  else  {    digitalWrite(LED1, HIGH);  }
-  if (sensorValue > battLevel2)   {    digitalWrite(LED2, LOW);  }  else  {    digitalWrite(LED2, HIGH);  }
-  if (sensorValue > battLevel3)   {    digitalWrite(LED3, LOW);  }  else  {    digitalWrite(LED3, HIGH);  }
-  if (sensorValue > battLevel4)   {    digitalWrite(LED4, LOW);  }  else  {    digitalWrite(LED4, HIGH);  }
-  if (sensorValue > battLevel5)   {    digitalWrite(LED5, LOW);  }  else  {    digitalWrite(LED5, HIGH);  }
-  delay(5000);
-  for   (int a = 1; a < 6 ; a++)
-  {
-  setLedOff(a);
-  //setLedOn(a); //For debugging on setup do to reverse setup
-
-  }
-  delay(500);
-
-  turnOnBackLight();
-}

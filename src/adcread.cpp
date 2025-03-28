@@ -1,31 +1,14 @@
+/*Michael Rahr 03-28-2025
+Handle ADC reading and return a compensated value, it will compensate for the non liner ADC of the ESP32
+*/
 #include <Arduino.h>
-#include "test.h"
+#include "adcread.h"
 #include "hw.h"
 
 
-void setPin(int setPin){
-      digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
-}
-
-//SetLed based on the batt level
-void setLed(float adjustedInputVoltage)
-{
-  if (adjustedInputVoltage > battLevel1)   {    digitalWrite(LED1, HIGH);  }  else  {    digitalWrite(LED1, LOW);  }
-  if (adjustedInputVoltage > battLevel2)   {    digitalWrite(LED2, HIGH);  }  else  {    digitalWrite(LED2, LOW);  }
-  if (adjustedInputVoltage > battLevel3)   {    digitalWrite(LED3, HIGH);  }  else  {    digitalWrite(LED3, LOW);  }
-  if (adjustedInputVoltage > battLevel4)   {    digitalWrite(LED4, HIGH);  }  else  {    digitalWrite(LED4, LOW);  }
-  if (adjustedInputVoltage > battLevel5)   {    digitalWrite(LED5, HIGH);  }  else  {    digitalWrite(LED5, LOW);  }
-}
-
-void setLedPinMode(){
-      pinMode(LED1, OUTPUT);
-      pinMode(LED2, OUTPUT);
-      pinMode(LED3, OUTPUT);
-      pinMode(LED4, OUTPUT);
-      pinMode(LED5, OUTPUT);
 
 
-}
+
 
 // Function for the linear adjustment of the ADC.
 double analogReadAdjusted(byte pinNumber){

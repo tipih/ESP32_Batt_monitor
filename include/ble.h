@@ -1,3 +1,7 @@
+/*Michael Rahr 03-28-2025
+Overall function to handle all ble communication and setup
+*/
+
 #ifndef BLE_H
 #define BLE_H
 
