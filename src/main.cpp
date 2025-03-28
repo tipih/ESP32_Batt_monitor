@@ -1,7 +1,7 @@
-/*Michael Rahr 03-28-2025
-Handle ADC reading and return a compensated value, it will compensate for the
-non liner ADC of the ESP32 Credit to below
-*/
+// Michael Rahr 03-28-2025
+// This code is under Public Domain License.
+// Handle ADC reading and return a compensated value, it will compensate for the
+// non liner ADC of the ESP32 Credit to below
 
 /*
   Deep Sleep with External Wake Up
@@ -9,13 +9,7 @@ non liner ADC of the ESP32 Credit to below
   This code displays how to use deep sleep with
   an external trigger as a wake up source and how
   to store data in RTC memory to use it over reboots
-
   This code is under Public Domain License.
-
-  Hardware Connections
-  ======================
-  Push Button to GPIO 33 pulled down with a 10K Ohm
-  resistor
 
   NOTE:
   ======
@@ -120,7 +114,7 @@ void setup() {
   pinMode(GPIO_BTN, INPUT_PULLDOWN);
   pinMode(Back_light, OUTPUT);
   setLedPinMode(); // Setting LED1-5 for output
-  ble_init();      // Setup the BLE server
+  bleInit();       // Setup the BLE server
   Serial.println("Waiting for a Client to connect...");
   attachInterrupt(WAKEUP_GPIO, isr, RISING); // Interrupt for shake sensor
   attachInterrupt(GPIO_BTN, checkADC,
@@ -293,8 +287,8 @@ void getADC() {
   if (isConnected) {
     /* Set the value */
 
-    ble_update_timeout((std::string)buffer1);
-    ble_update_voltage((std::string)buffer);
+    bleUpdateTimeout((std::string)buffer1);
+    bleUpdateVoltage((std::string)buffer);
   }
 
   // setLed(adjustedInputVoltage);   //Set Status LED according voltage

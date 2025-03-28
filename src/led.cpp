@@ -1,6 +1,7 @@
-/*Michael Rahr 03-28-2025
-Led handling
-*/
+//Michael Rahr 03-28-2025
+//This code is under Public Domain License.
+//Led handling
+
 
 #include <adcread.h>
 #include <hw.h>
