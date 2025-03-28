@@ -11,6 +11,7 @@ BLEService* bleService;
 BLEServer* bleServer;
 BLECharacteristic* bleCharacteristic;
 BLECharacteristic* bleCharacteristic1;
+MyCharacteristicCallbacks* myCharacteristicCallbacks;
 unsigned long sleep_timer = 300000; //Init of global var
 bool isConnected=false;
 
@@ -20,8 +21,11 @@ bool isConnected=false;
 
 void MyCharacteristicCallbacks::onWrite(BLECharacteristic* characteristic){
     std::string receivedData = characteristic->getValue();
+    BLEUUID myID = characteristic->getUUID();
+
     Serial.println("Received data");
     Serial.println(receivedData.c_str());
+    Serial.println(myID.toString().c_str());
     sleep_timer = atoi(receivedData.c_str());
 }
 
@@ -44,6 +48,9 @@ void ble_init(){
     bleServer->setCallbacks(new MyServerCallbacks());
     bleService = bleServer->createService(BLEUUID((uint16_t)0x180D)); //TODO find a good id
 
+    myCharacteristicCallbacks = new MyCharacteristicCallbacks();
+
+
     bleCharacteristic1 = bleService->createCharacteristic(BLEUUID((uint16_t)0x1A01), 
     BLECharacteristic::PROPERTY_READ | 
     BLECharacteristic::PROPERTY_NOTIFY |
@@ -54,8 +61,8 @@ void ble_init(){
     BLECharacteristic::PROPERTY_NOTIFY |
     BLECharacteristic::PROPERTY_WRITE);
 
-    bleCharacteristic1->setCallbacks(new MyCharacteristicCallbacks());
-
+    bleCharacteristic1->setCallbacks(myCharacteristicCallbacks);
+    bleCharacteristic->setCallbacks(myCharacteristicCallbacks);
 
     BLEDescriptor VariableDescriptor(BLEUUID((uint16_t)0x2901));  /*```````````````````````````````````````````````````````````````*/
     VariableDescriptor.setValue("Show Battery Voltage");          /* Use this format to add a hint for the user. This is optional. */
